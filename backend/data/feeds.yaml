@@ -1,0 +1,14 @@
+# Official RSS/Atom feeds used by the free news provider. One entry per feed.
+# Add or remove freely - a dead feed is skipped and shows up in `python -m app.cli doctor` and /status.
+# `currency` tags every item from that feed; leave it out to let the keyword tagger decide.
+feeds:
+  - {name: "Federal Reserve - press releases", url: "https://www.federalreserve.gov/feeds/press_all.xml", currency: USD}
+  - {name: "Federal Reserve - speeches",       url: "https://www.federalreserve.gov/feeds/speeches.xml",  currency: USD}
+  - {name: "US Bureau of Labor Statistics",    url: "https://www.bls.gov/feed/bls_latest.rss",            currency: USD}
+  - {name: "European Central Bank",            url: "https://www.ecb.europa.eu/rss/press.html",           currency: EUR}
+  - {name: "Bank of England",                  url: "https://www.bankofengland.co.uk/rss/news",           currency: GBP}
+  - {name: "Bank of Japan",                    url: "https://www.boj.or.jp/en/rss/whatsnew.xml",          currency: JPY}
+  - {name: "Swiss National Bank",              url: "https://www.snb.ch/public/en/rss/pressrel",          currency: CHF}
+  - {name: "Reserve Bank of Australia",        url: "https://www.rba.gov.au/rss/rss-cb-media-releases.xml", currency: AUD}
+  - {name: "Reserve Bank of New Zealand",      url: "https://www.rbnz.govt.nz/rss/news",                  currency: NZD}
+  - {name: "Bank of Canada",                   url: "https://www.bankofcanada.ca/content_type/press-releases/feed/", currency: CAD}

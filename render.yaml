@@ -1,0 +1,43 @@
+# Blueprint for Render (render.com/docs/blueprint-spec). Deploy: New -> Blueprint -> point at this repo.
+databases:
+  - name: forex-terminal-db
+    plan: free
+    databaseName: forex_terminal
+    user: forex_terminal
+
+services:
+  - type: web
+    name: forex-terminal-api
+    plan: free
+    runtime: python
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python -m app.cli init-db && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: { name: forex-terminal-db, property: connectionString }
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CRON_TOKEN
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: "https://your-app.vercel.app"
+      # Free-tier tip: leave ENABLE_SCHEDULER=true only on a paid/always-on instance.
+      # On the free plan (which sleeps after 15 idle minutes) set it to false and drive
+      # ingestion from .github/workflows/cron.yml -> POST /api/internal/tick/{job} instead.
+      - key: ENABLE_SCHEDULER
+        value: "false"
+      - key: DEMO_MODE
+        value: "true"   # flip to "false" once you've added TWELVEDATA_API_KEY / FRED_API_KEY
+      - key: FX_PROVIDERS
+        value: "twelvedata,frankfurter"
+      - key: MACRO_PROVIDERS
+        value: "fred,ecb,boc,boe"
+      - key: NEWS_PROVIDERS
+        value: "rss"
+      - key: CALENDAR_PROVIDERS
+        value: "official"
+      - key: TWELVEDATA_API_KEY
+        sync: false
+      - key: FRED_API_KEY
+        sync: false

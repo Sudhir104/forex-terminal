@@ -1,0 +1,25 @@
+# Local full-stack dev only (Postgres + backend). Deployment uses Render (backend) + Vercel
+# (frontend) instead - see render.yaml and frontend/vercel.json.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: forex_terminal
+      POSTGRES_USER: forex_terminal
+      POSTGRES_PASSWORD: localdev
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+
+  api:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://forex_terminal:localdev@db:5432/forex_terminal
+    ports: ["8000:8000"]
+    depends_on: [db]
+    volumes: ["./backend:/app"]
+    command: >
+      sh -c "python -m app.cli init-db && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+volumes:
+  pgdata:

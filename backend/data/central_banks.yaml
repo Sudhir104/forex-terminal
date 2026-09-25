@@ -1,0 +1,57 @@
+# Central-bank profile - the ONE thing worth curating by hand (each bank meets ~8 times a year).
+#
+#   stance:    hawkish | neutral | dovish | null   (your read of the latest statement; null = not assessed yet)
+#   rate:      optional manual policy rate (%) - only needed where the free APIs have no fresh value
+#              (typically JPY, CHF, AUD, NZD). Set `as_of` to the date the rate took effect.
+#   meetings:  upcoming decision dates (YYYY-MM-DD) - they feed the economic calendar.
+#
+# NOTE: stance values below are a rough starting point (as of Jan 2026 knowledge) - re-check
+# each bank's latest statement before trusting these, and update after every decision.
+USD:
+  bank: Federal Reserve
+  stance: neutral
+  statement_url: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+  meetings: []
+EUR:
+  bank: European Central Bank
+  stance: dovish
+  statement_url: https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html
+  meetings: []
+GBP:
+  bank: Bank of England
+  stance: neutral
+  statement_url: https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates
+  meetings: []
+JPY:
+  bank: Bank of Japan
+  stance: hawkish
+  rate: null
+  as_of: null
+  statement_url: https://www.boj.or.jp/en/mopo/mpmdeci/index.htm
+  meetings: []
+CHF:
+  bank: Swiss National Bank
+  stance: dovish
+  rate: null
+  as_of: null
+  statement_url: https://www.snb.ch/en/the-snb/mandates-goals/monetary-policy/decisions
+  meetings: []
+AUD:
+  bank: Reserve Bank of Australia
+  stance: neutral
+  rate: null
+  as_of: null
+  statement_url: https://www.rba.gov.au/monetary-policy/int-rate-decisions/
+  meetings: []
+NZD:
+  bank: Reserve Bank of New Zealand
+  stance: dovish
+  rate: null
+  as_of: null
+  statement_url: https://www.rbnz.govt.nz/monetary-policy/about-monetary-policy/monetary-policy-decisions
+  meetings: []
+CAD:
+  bank: Bank of Canada
+  stance: dovish
+  statement_url: https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/
+  meetings: []
