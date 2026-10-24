@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import scheduler
-from .api import admin, auth, calendar, central_banks, currencies, internal, news, pairs, status
+from .api import admin, auth, calendar, central_banks, currencies, internal, news, pairs, public, status
 from .config import get_settings
 from .db import init_db
 
@@ -28,7 +28,7 @@ def create_app() -> FastAPI:
     app.add_middleware(CORSMiddleware, allow_origins=settings.cors_list, allow_credentials=True,
                        allow_methods=["*"], allow_headers=["*"])
     for router in (auth.router, currencies.router, pairs.router, news.router, calendar.router,
-                  central_banks.router, admin.router, status.router, internal.router):
+                  central_banks.router, admin.router, status.router, internal.router, public.router):
         app.include_router(router)
 
     @app.get("/api/health")

@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FX Desk — Forex Fundamental Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0A0D12; --panel:#0F131A; --panel-raised:#151A23;
+    --line:#232A35; --line-soft:#1A2029;
+    --text-hi:#EDEFF2; --text-lo:#8B93A3; --text-dim:#525A68;
+    --signal:#D4A257; --up:#4CAF8C; --down:#C96257;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--ink); color:var(--text-hi);
+    font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased;
+    display:flex; flex-direction:column;
+  }
+  .mono{font-family:'IBM Plex Mono',ui-monospace,monospace; font-variant-numeric:tabular-nums}
+  a{color:inherit}
+
+  header.masthead{
+    flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
+    padding:12px 22px; border-bottom:1px solid var(--line); background:var(--panel);
+  }
+  .brand{display:flex; align-items:baseline; gap:11px}
+  .brand h1{font-size:16px; font-weight:600; margin:0; font-family:'Space Grotesk',sans-serif}
+  .brand .sub{color:var(--text-dim); font-size:11px}
+  .session{display:flex; align-items:center; gap:16px; font-size:11px; color:var(--text-lo)}
+  .session .state{display:flex; align-items:center; gap:6px}
+  .dot{width:5px; height:5px; border-radius:50%; display:inline-block}
+  .dot.ok{background:var(--up)} .dot.wait{background:var(--signal)} .dot.err{background:var(--down)}
+  .session button{
+    background:var(--panel-raised); border:1px solid var(--line); color:var(--text-lo);
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; padding:5px 10px; border-radius:4px; cursor:pointer;
+  }
+  .session button:hover{color:var(--text-hi); border-color:var(--signal)}
+  .session button:disabled{opacity:.5; cursor:default}
+
+  .spectrum-wrap{flex:0 0 auto; padding:13px 22px 12px; border-bottom:1px solid var(--line); background:var(--panel)}
+  .spectrum-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px}
+  .spectrum-head h2{font-size:11px; font-weight:600; margin:0; font-family:'Space Grotesk',sans-serif; color:var(--text-lo); letter-spacing:.02em}
+  .spectrum-head .meta{font-size:10px; color:var(--text-dim); font-family:'IBM Plex Mono',monospace}
+  .spectrum{position:relative; height:36px}
+  .spectrum .axis{position:absolute; left:0; right:0; top:18px; height:1px; background:var(--line)}
+  .spectrum .axis.mid{left:50%; width:1px; height:9px; top:14px; background:var(--text-dim)}
+  .spectrum .node{position:absolute; top:0; transform:translateX(-50%); text-align:center; width:44px; cursor:pointer}
+  .spectrum .node .pt{width:8px; height:8px; border-radius:50%; margin:11px auto 0; border:2px solid var(--ink)}
+  .spectrum .node .cc{font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; margin-top:4px}
+  .spectrum .node .sc{font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--text-dim)}
+  .spectrum .node.lead .cc{color:var(--signal)}
+  .spectrum .node.lead .pt{box-shadow:0 0 0 3px rgba(212,162,87,.18)}
+
+  .board{
+    flex:1 1 auto; min-height:0; display:grid;
+    grid-template-columns:1.6fr 1.25fr 1.15fr; gap:1px; background:var(--line); overflow:hidden;
+  }
+  .col{background:var(--ink); display:flex; flex-direction:column; min-height:0; overflow:hidden}
+  .col > .block{display:flex; flex-direction:column; min-height:0}
+  .col > .block + .block{border-top:1px solid var(--line)}
+
+  .block-head{flex:0 0 auto; display:flex; align-items:baseline; justify-content:space-between; padding:10px 15px 6px}
+  .block-head h2{font-size:11px; font-weight:600; margin:0; font-family:'Space Grotesk',sans-serif}
+  .block-head .meta{font-size:9.5px; color:var(--text-dim); font-family:'IBM Plex Mono',monospace}
+  .block-body{flex:1 1 auto; min-height:0; overflow-y:auto; padding:0 15px 10px}
+  .block-body::-webkit-scrollbar{width:5px}
+  .block-body::-webkit-scrollbar-thumb{background:var(--line); border-radius:3px}
+
+  table.strength{width:100%; border-collapse:collapse; font-size:12px}
+  table.strength th{text-align:left; font-weight:500; color:var(--text-dim); font-size:9.5px; padding:0 5px 5px 0; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--ink)}
+  table.strength tr{cursor:pointer}
+  table.strength tr:hover td{background:var(--panel)}
+  table.strength tr.sel td{background:var(--panel-raised)}
+  table.strength td{padding:7px 5px; border-bottom:1px solid var(--line-soft)}
+  table.strength td.ccy{font-family:'IBM Plex Mono',monospace; font-weight:600; width:36px}
+  table.strength td.bank{color:var(--text-lo); font-size:11px}
+  table.strength td.bar{width:84px}
+  table.strength td.score{font-family:'IBM Plex Mono',monospace; text-align:right; width:42px; font-weight:500}
+  table.strength td.lbl{color:var(--text-dim); font-size:10px; width:92px; text-align:right}
+  table.strength td.asof{color:var(--text-dim); font-size:10px; width:90px; text-align:right}
+  .mini-bar{height:4px; border-radius:2px; background:var(--line-soft); position:relative}
+  .mini-bar .fill{position:absolute; top:0; bottom:0; left:0; border-radius:2px}
+  .mini-bar .mid{position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:var(--text-dim)}
+
+  .factor-row{display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--line-soft); font-size:11.5px}
+  .factor-row:last-child{border-bottom:none}
+  .factor-row .src{color:var(--text-dim); font-size:10px; display:block; margin-top:1px}
+  .factor-row .src a{color:var(--text-dim); text-decoration:none; border-bottom:1px dotted var(--text-dim)}
+  .factor-row .src a:hover{color:var(--signal); border-color:var(--signal)}
+  .factor-row .v{font-family:'IBM Plex Mono',monospace; font-weight:500; flex:0 0 auto; margin-left:10px}
+  .factor-row.live .src{color:var(--signal)}
+  .rationale{font-size:11px; color:var(--text-lo); line-height:1.5; padding:8px 0; border-bottom:1px solid var(--line-soft); margin-bottom:2px}
+
+  .spark{width:100%; height:34px; display:block}
+  .spark-labels{display:flex; justify-content:space-between; font-size:9px; color:var(--text-dim); font-family:'IBM Plex Mono',monospace; margin-top:3px}
+
+  table.cal{width:100%; border-collapse:collapse; font-size:11.5px}
+  table.cal th{text-align:left; font-weight:500; color:var(--text-dim); font-size:9.5px; padding:0 7px 5px 0; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--ink)}
+  table.cal td{padding:7px 7px 7px 0; border-bottom:1px solid var(--line-soft)}
+  table.cal td.time{font-family:'IBM Plex Mono',monospace; color:var(--text-lo); white-space:nowrap; width:76px; font-size:10.5px}
+  table.cal td.ccy{font-family:'IBM Plex Mono',monospace; font-weight:600; width:32px}
+  table.cal td.ev{max-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  table.cal td.num{font-family:'IBM Plex Mono',monospace; text-align:right; color:var(--text-lo); font-size:10.5px; width:52px}
+  table.cal td.bias{font-weight:500; text-align:right; width:62px; font-size:10.5px}
+  .bias.up{color:var(--up)} .bias.down{color:var(--down)} .bias.pending{color:var(--text-dim)}
+  .empty-note{font-size:11.5px; color:var(--text-dim); padding:12px 0}
+
+  .pairpick{display:flex; align-items:center; gap:8px}
+  .pairpick select{background:var(--panel-raised); border:1px solid var(--line); color:var(--text-hi); font-family:'IBM Plex Mono',monospace; font-size:11.5px; padding:6px 8px; border-radius:4px; flex:1}
+  .pairpick .x{color:var(--text-dim); font-size:11.5px}
+  .pairresult{margin-top:10px; padding-top:10px; border-top:1px solid var(--line-soft)}
+  .pairresult .code{font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600}
+  .pairresult .val{font-family:'IBM Plex Mono',monospace; font-size:15px; margin-left:8px}
+  .pairresult .note{font-size:11px; color:var(--text-lo); margin-top:6px; line-height:1.5}
+
+  .news-row{padding:8px 0; border-bottom:1px solid var(--line-soft); display:flex; gap:8px}
+  .news-row:last-child{border-bottom:none}
+  .news-row .nd{width:6px; height:6px; border-radius:50%; margin-top:5px; flex:0 0 auto}
+  .nd.up{background:var(--up)} .nd.down{background:var(--down)} .nd.flat{background:var(--text-dim)}
+  .news-row .nb{min-width:0}
+  .news-row .nm{display:flex; gap:7px; align-items:baseline; margin-bottom:2px}
+  .news-row .ncc{font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; color:var(--text-lo)}
+  .news-row .nt{font-size:9.5px; color:var(--text-dim); font-family:'IBM Plex Mono',monospace}
+  .news-row .nh{font-size:11.5px; color:var(--text-hi); line-height:1.4}
+
+  .note-block{border-left:2px solid var(--signal); padding:0 0 0 12px}
+  .note-block + .note-block{margin-top:13px}
+  .note-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px}
+  .note-head .who{font-size:10px; color:var(--signal); font-weight:500}
+  .note-head .when{font-size:9.5px; color:var(--text-dim); font-family:'IBM Plex Mono',monospace}
+  .note-body{font-size:11px; color:var(--text-lo); line-height:1.5}
+  .note-body strong{color:var(--text-hi); font-weight:500}
+  .note-foot{font-size:9.5px; color:var(--text-dim); margin-top:10px; line-height:1.5; border-top:1px solid var(--line-soft); padding-top:8px}
+
+  footer{flex:0 0 auto; padding:7px 22px; border-top:1px solid var(--line); font-size:9.5px; color:var(--text-dim); background:var(--panel)}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="brand"><h1>FX Desk</h1><span class="sub">Central-bank bias · macro evidence · calendar · news</span></div>
+  <div class="session">
+    <span class="state"><span class="dot wait" id="liveDot"></span><span id="liveStatus">loading live scores…</span></span>
+    <span class="state"><span class="dot wait" id="liveDot"></span><span id="liveStatus">loading live scores…</span></span>
+    <span class="state"><span class="dot wait" id="ffDot"></span><span id="ffStatusShort">loading calendar…</span></span>
+    <button id="ffBtn" onclick="loadForexFactory()">Refresh calendar</button>
+    <span class="mono" id="clock"></span>
+  </div>
+</header>
+
+<div class="spectrum-wrap">
+  <div class="spectrum-head"><h2>Market spectrum</h2><span class="meta">weakest → strongest · click to inspect</span></div>
+  <div class="spectrum" id="spectrum"></div>
+</div>
+
+<div class="board">
+
+  <!-- COLUMN 1 — currency intelligence -->
+  <div class="col">
+    <div class="block" style="flex:1">
+      <div class="block-head"><h2>Currency strength</h2><span class="meta">−5 → +5</span></div>
+      <div class="block-body"><table class="strength" id="strengthTable"></table></div>
+    </div>
+    <div class="block" style="flex:0.95">
+      <div class="block-head"><h2 id="factorTitle">USD factor detail</h2></div>
+      <div class="block-body" id="factorDetail"></div>
+    </div>
+    <div class="block" style="flex:0.3">
+      <div class="block-head"><h2>Score freshness</h2></div>
+      <div class="block-body" style="font-size:11px; color:var(--text-lo); line-height:1.6; padding-top:6px;">
+        Scores come live from the forex-terminal backend's scoring engine (FRED / ECB / BoC / BoE), refreshed on its own schedule. "As of" in the table above is the backend's last computation time — not a fabricated trend.
+      </div>
+    </div>
+  </div>
+
+  <!-- COLUMN 2 — events & comparison -->
+  <div class="col">
+    <div class="block" style="flex:1.5">
+      <div class="block-head"><h2>🔴 Red Folder — high impact</h2><span class="meta" id="calMeta">Forex Factory · IST</span></div>
+      <div class="block-body">
+        <table class="cal">
+          <thead><tr><th>Time</th><th>Ccy</th><th>Event</th><th style="text-align:right">A</th><th style="text-align:right">F</th><th style="text-align:right">P</th><th style="text-align:right">Bias</th></tr></thead>
+          <tbody id="ffBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="block" style="flex:1">
+      <div class="block-head"><h2>Relative bias</h2></div>
+      <div class="block-body">
+        <div class="pairpick"><select id="baseSel"></select><span class="x">vs</span><select id="quoteSel"></select></div>
+        <div class="pairresult" id="pairResult"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COLUMN 3 — news & desk note -->
+  <div class="col">
+    <div class="block" style="flex:1">
+      <div class="block-head"><h2>News</h2><span class="meta">from released Red Folder data</span></div>
+      <div class="block-body" id="newsFeed"></div>
+    </div>
+    <div class="block" style="flex:1.3">
+      <div class="block-head"><h2>Desk note</h2><span class="meta">auto-generated, free</span></div>
+      <div class="block-body" id="deskNotes"></div>
+    </div>
+  </div>
+
+</div>
+
+<footer>Research tool, not a trading signal. Scores and notes are an analytical starting point, generated from the linked primary sources and the live Forex Factory feed — read the underlying release before acting on it.</footer>
+
+<script>
+/* ================= REAL DATA (unchanged from the research build) ================= */
+const banks={
+USD:{name:"Federal Reserve",score:null,asOf:null,rate:"3.75–4.00%",reason:"Hawkish: hike + elevated inflation + resilient economy",factors:{"Interest Rate":4,"CPI / Inflation":4,"2Y Yield":4,"Unemployment / Jobs":3,"GDP":3}},
+EUR:{name:"ECB",score:null,asOf:null,rate:"Higher",reason:"Hawkish: inflation pressure and rate hike",factors:{"Interest Rate":3,"CPI / Inflation":3,"2Y Yield":3,"Unemployment / Jobs":2,"GDP":2}},
+GBP:{name:"Bank of England",score:null,asOf:null,rate:"3.75%",reason:"Mixed: inflation risk vs easing pressure",factors:{"Interest Rate":1,"CPI / Inflation":2,"2Y Yield":1,"Unemployment / Jobs":0,"GDP":0}},
+JPY:{name:"Bank of Japan",score:null,asOf:null,rate:"Policy dependent",reason:"Mildly hawkish / normalization-sensitive",factors:{"Interest Rate":1,"CPI / Inflation":1,"2Y Yield":1,"Unemployment / Jobs":1,"GDP":0}},
+CHF:{name:"SNB",score:null,asOf:null,rate:"0%",reason:"Dovish: low policy rate / FX intervention flexibility",factors:{"Interest Rate":-2,"CPI / Inflation":-1,"2Y Yield":-1,"Unemployment / Jobs":0,"GDP":0}},
+AUD:{name:"RBA",score:null,asOf:null,rate:"Policy dependent",reason:"Moderately hawkish: domestic capacity/inflation pressure",factors:{"Interest Rate":2,"CPI / Inflation":2,"2Y Yield":2,"Unemployment / Jobs":1,"GDP":1}},
+NZD:{name:"RBNZ",score:null,asOf:null,rate:"Policy dependent",reason:"Mildly dovish: growth-sensitive stance",factors:{"Interest Rate":-1,"CPI / Inflation":0,"2Y Yield":-1,"Unemployment / Jobs":-1,"GDP":-1}},
+CAD:{name:"Bank of Canada",score:null,asOf:null,rate:"Policy dependent",reason:"Balanced / data dependent",factors:{"Interest Rate":0,"CPI / Inflation":1,"2Y Yield":0,"Unemployment / Jobs":0,"GDP":0}}
+};
+const fundamentalSources={
+USD:{"Interest Rate":["Federal Reserve — monetary policy","https://www.federalreserve.gov/monetarypolicy.htm"],"CPI / Inflation":["U.S. BLS — CPI","https://www.bls.gov/cpi/"],"2Y Yield":["U.S. Treasury — Par Yield Curve","https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve"],"Unemployment / Jobs":["U.S. BLS — Employment Situation","https://www.bls.gov/news.release/empsit.htm"],"GDP":["U.S. BEA — GDP","https://www.bea.gov/data/gdp/gross-domestic-product"]},
+EUR:{"Interest Rate":["ECB — Key interest rates","https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html"],"CPI / Inflation":["Eurostat — HICP inflation","https://ec.europa.eu/eurostat/web/products-eurostat-news/w/ddn-20260917-1"],"2Y Yield":["ECB — yield curves","https://www.ecb.europa.eu/stats/financial_markets_and_interest_rates/euro_area_yield_curves/html/index.en.html"],"Unemployment / Jobs":["Eurostat — unemployment statistics","https://ec.europa.eu/eurostat/statistics-explained/index.php?title=Unemployment_statistics"],"GDP":["Eurostat — GDP","https://ec.europa.eu/eurostat/web/national-accounts/statistics-illustrated"]},
+GBP:{"Interest Rate":["Bank of England — Bank Rate","https://www.bankofengland.co.uk/boeapps/database/Bank-Rate.asp"],"CPI / Inflation":["UK ONS — CPI","https://www.ons.gov.uk/economy/inflationandpriceindices"],"2Y Yield":["UK DMO — gilt yields","https://www.dmo.gov.uk/data/"],"Unemployment / Jobs":["UK ONS — labour market","https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes"],"GDP":["UK ONS — GDP","https://www.ons.gov.uk/economy/grossdomesticproductgdp"]},
+JPY:{"Interest Rate":["Bank of Japan — Monetary Policy","https://www.boj.or.jp/en/mopo/index.htm"],"CPI / Inflation":["Stat Bureau Japan — CPI","https://www.stat.go.jp/english/data/cpi/"],"2Y Yield":["Bank of Japan — JGB yields","https://www.boj.or.jp/en/statistics/market/long/index.htm"],"Unemployment / Jobs":["Stat Bureau Japan — Labour Force Survey","https://www.stat.go.jp/english/data/handbook/c0117.html"],"GDP":["Cabinet Office Japan — National Accounts","https://www.esri.cao.go.jp/en/sna/menu.html"]},
+CHF:{"Interest Rate":["Swiss National Bank — monetary policy","https://www.snb.ch/en/iabout/monpol"],"CPI / Inflation":["Federal Statistical Office — CPI","https://www.bfs.admin.ch/bfs/en/home/statistics/prices/consumer-price-index.html"],"2Y Yield":["SNB — interest rates","https://data.snb.ch/en/topics/ziredev#!/cube/zimoma"],"Unemployment / Jobs":["SECO — unemployment","https://www.seco.admin.ch/seco/en/home/Arbeit/Arbeitslosenversicherung/arbeitslosenzahlen.html"],"GDP":["SECO — GDP","https://www.seco.admin.ch/seco/en/home/wirtschaftslage---wirtschaftspolitik/Wirtschaftslage/bip-quartalsschaetzungen-.html"]},
+AUD:{"Interest Rate":["Reserve Bank of Australia — cash rate","https://www.rba.gov.au/statistics/cash-rate/"],"CPI / Inflation":["ABS — CPI","https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/consumer-price-index-australia"],"2Y Yield":["RBA — bond yields","https://www.rba.gov.au/statistics/ags-bond-yields/"],"Unemployment / Jobs":["ABS — Labour Force","https://www.abs.gov.au/statistics/labour/employment-and-unemployment/labour-force-australia"],"GDP":["ABS — National accounts","https://www.abs.gov.au/statistics/economy/national-accounts/australian-national-accounts-national-income-expenditure-and-product"]},
+NZD:{"Interest Rate":["RBNZ — official cash rate","https://www.rbnz.govt.nz/monetary-policy/official-cash-rate"],"CPI / Inflation":["Stats NZ — CPI","https://www.stats.govt.nz/information-releases/consumers-price-index-june-2026-quarter/"],"2Y Yield":["RBNZ — wholesale rates","https://www.rbnz.govt.nz/statistics/wholesale-interest-rates"],"Unemployment / Jobs":["Stats NZ — labour market","https://www.stats.govt.nz/topics/labour-market"],"GDP":["Stats NZ — GDP","https://www.stats.govt.nz/topics/economy"]},
+CAD:{"Interest Rate":["Bank of Canada — policy rate","https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/"],"CPI / Inflation":["Statistics Canada — CPI","https://www.statcan.gc.ca/en/subjects-start/prices_and_price_indexes/consumer_price_indexes"],"2Y Yield":["Bank of Canada — bond yields","https://www.bankofcanada.ca/rates/interest-rates/canadian-bonds/"],"Unemployment / Jobs":["Statistics Canada — Labour Force Survey","https://www.statcan.gc.ca/en/subjects-start/labour_/labour-force-survey"],"GDP":["Statistics Canada — GDP","https://www.statcan.gc.ca/en/subjects-start/economic-accounts"]}
+};
+const keys=Object.keys(banks);
+let selected='USD';
+const API_BASE="https://forex-terminal-api.onrender.com";
+async function loadLiveScores(){
+  try{
+    const r=await fetch(API_BASE+"/api/public/currencies",{cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const rows=await r.json();
+    rows.forEach(row=>{ if(banks[row.currency]){ banks[row.currency].score=row.total; banks[row.currency].asOf=row.computed_at; } });
+    document.getElementById("liveStatus").textContent="live \u00b7 backend scores";
+    document.getElementById("liveDot").className="dot ok";
+  }catch(e){
+    document.getElementById("liveStatus").textContent="backend unreachable";
+    document.getElementById("liveDot").className="dot err";
+  }
+  renderSpectrum(); renderStrengthTable(); renderFactors(); renderPairTool(); renderDeskNotes();
+}
+
+/* ================= helpers ================= */
+function toneColor(s){ return s>=1?'var(--up)': s<=-1?'var(--down)':'var(--text-lo)' }
+function toneClass(s){ return s>=1?'up': s<=-1?'down':'flat' }
+function label(s){ return s>=3?'Strongly bullish': s>=1?'Bullish': s>-1?'Neutral': s>-3?'Bearish':'Strongly bearish' }
+
+/* ================= Market spectrum ================= */
+function renderSpectrum(){
+  const ready=keys.filter(k=>banks[k].score!==null);
+  if(!ready.length){ document.getElementById('spectrum').innerHTML='<div class="empty-note">Loading live scores…</div>'; return; }
+  const sorted=[...ready].sort((a,b)=>banks[a].score-banks[b].score);
+  const lo=Math.min(...ready.map(k=>banks[k].score),-5), hi=Math.max(...ready.map(k=>banks[k].score),5);
+  const strongest=sorted[sorted.length-1], weakest=sorted[0];
+  document.getElementById('spectrum').innerHTML='<div class="axis"></div><div class="axis mid"></div>'+
+    sorted.map(k=>{
+      const b=banks[k], pct=((b.score-lo)/(hi-lo))*100, isLead=(k===strongest||k===weakest);
+      return `<div class="node ${isLead?'lead':''}" data-k="${k}" style="left:${pct}%">
+        <div class="pt" style="background:${toneColor(b.score)}"></div>
+        <div class="cc">${k}</div><div class="sc">${b.score>0?'+':''}${b.score}</div></div>`;
+    }).join('');
+  document.querySelectorAll('#spectrum .node').forEach(n=>n.addEventListener('click',()=>selectCurrency(n.dataset.k)));
+}
+
+/* ================= Currency strength table ================= */
+function renderStrengthTable(){
+  document.getElementById('strengthTable').innerHTML=
+    '<thead><tr><th>Ccy</th><th>Bank</th><th>Bias</th><th style="text-align:right">Score</th><th style="text-align:right">Read</th><th style="text-align:right">As of</th></tr></thead><tbody>'+
+    keys.map(k=>{
+      const b=banks[k], has=b.score!==null, pct=has?((b.score+5)/10)*100:50;
+      const asOfTxt=b.asOf?new Date(b.asOf).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'\u2014';
+      return `<tr data-k="${k}" class="${k===selected?'sel':''}">
+        <td class="ccy">${k}</td><td class="bank">${b.name}</td>
+        <td class="bar"><div class="mini-bar"><div class="fill" style="width:${pct}%;background:${has?toneColor(b.score):'var(--text-dim)'}"></div><div class="mid"></div></div></td>
+        <td class="score" style="color:${has?toneColor(b.score):'var(--text-dim)'}">${has?(b.score>0?'+':'')+b.score:'…'}</td>
+        <td class="lbl">${has?label(b.score):'\u2014'}</td>
+        <td class="asof">${asOfTxt}</td></tr>`;
+    }).join('')+'</tbody>';
+  document.querySelectorAll('#strengthTable tbody tr').forEach(row=>row.addEventListener('click',()=>selectCurrency(row.dataset.k)));
+}
+
+function selectCurrency(k){
+  selected=k;
+  renderStrengthTable(); renderFactors();
+}
+
+/* ================= Factor detail (+ live Red Folder row) ================= */
+function redFolderFactorForCurrency(ccy){
+  if(!ffData.length) return null;
+  const relevant=ffData.filter(e=>e.country===ccy).map(ffBias).filter(x=>x.score!==0);
+  if(!relevant.length) return null;
+  const score=Math.max(-5,Math.min(5,relevant.reduce((a,b)=>a+b.score,0)));
+  return {score, n:relevant.length};
+}
+function renderFactors(){
+  const b=banks[selected], src=fundamentalSources[selected]||{};
+  document.getElementById('factorTitle').textContent=selected+' factor detail';
+  let html=`<div class="rationale">${b.reason}</div>`;
+  html+=Object.entries(src).map(([factor,v])=>{
+    const fscore=b.factors?.[factor]??0;
+    return `<div class="factor-row"><div><span>${factor}</span><span class="src">${sourceLink(v[0],v[1])}</span></div><span class="v" style="color:${toneColor(fscore)}">${fscore>0?'+':''}${fscore}</span></div>`;
+  }).join('');
+  const rf=redFolderFactorForCurrency(selected);
+  if(rf){
+    html+=`<div class="factor-row live"><div><span>Red Folder (live)</span><span class="src">${rf.n} released high-impact event${rf.n>1?'s':''} this week</span></div><span class="v" style="color:${toneColor(rf.score)}">${rf.score>0?'+':''}${rf.score}</span></div>`;
+  } else {
+    html+=`<div class="factor-row live"><div><span>Red Folder (live)</span><span class="src">no released high-impact surprise yet this week</span></div><span class="v" style="color:var(--text-dim)">—</span></div>`;
+  }
+  document.getElementById('factorDetail').innerHTML=html;
+}
+function sourceLink(name,url){return `<a href="${url}" target="_blank" rel="noopener">${name} ↗</a>`}
+
+/* ================= Bias history (real: previous -> current, no fabricated points) ================= */
+/* ================= Relative bias pair tool ================= */
+function renderPairTool(){
+  ['baseSel','quoteSel'].forEach(id=>{ document.getElementById(id).innerHTML=keys.map(k=>`<option>${k}</option>`).join(''); });
+  document.getElementById('baseSel').value='AUD';
+  document.getElementById('quoteSel').value='CAD';
+  function update(){
+    const a=document.getElementById('baseSel').value, q=document.getElementById('quoteSel').value;
+    if(banks[a].score===null||banks[q].score===null){
+      document.getElementById('pairResult').innerHTML=`<span class="code">${a}${q}</span><p class="note">Waiting for live scores…</p>`;
+      return;
+    }
+    const s=+(banks[a].score-banks[q].score).toFixed(1);
+    document.getElementById('pairResult').innerHTML=
+      `<span class="code">${a}${q}</span><span class="val" style="color:${toneColor(s)}">${s>0?'+':''}${s}</span>
+       <p class="note">${a} central-bank bias ${banks[a].score>0?'+':''}${banks[a].score} vs ${q} ${banks[q].score>0?'+':''}${banks[q].score} — ${label(Math.max(-5,Math.min(5,s))).toLowerCase()} tilt toward ${s>=0?a:q}.</p>`;
+  }
+  document.getElementById('baseSel').addEventListener('change',update);
+  document.getElementById('quoteSel').addEventListener('change',update);
+  update();
+}
+
+/* ================= Forex Factory — REAL live feed (unchanged logic) ================= */
+let ffData=[];
+const ffUrl="https://nfs.faireconomy.media/ff_calendar_thisweek.json";
+const ffCurrencies=new Set(keys);
+function ffNum(v){ if(v===undefined||v===null||v==='') return null; const x=String(v).replace(/,/g,'').match(/-?\d+(?:\.\d+)?/); return x?Number(x[0]):null; }
+function ffPolarity(title){
+  const t=title.toLowerCase();
+  if(/unemployment|jobless|claims|job cuts/.test(t)) return -1;
+  if(/inflation|cpi|ppi|pce|price index|wage|hourly earnings/.test(t)) return 1;
+  if(/retail sales|consumer spending|household spending|employment change|non-farm|nfp|payroll|gdp|industrial production|manufacturing|services|pmi|business confidence|consumer confidence|job openings|housing starts|building approvals|building permits|trade balance/.test(t)) return 1;
+  if(/interest rate|cash rate|rate decision|policy rate/.test(t)) return 1;
+  return 1;
+}
+function ffBias(e){
+  const a=ffNum(e.actual), f=ffNum(e.forecast);
+  if(a===null||f===null) return {label:'Pending',cls:'pending',score:0};
+  const d=a-f, p=ffPolarity(e.title);
+  if(Math.abs(d)<1e-12) return {label:'Neutral',cls:'pending',score:0};
+  const bullish=d*p>0;
+  return {label:bullish?'Bullish':'Bearish',cls:bullish?'up':'down',score:bullish?1:-1};
+}
+function istTime(iso){
+  try{return new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(iso));}
+  catch{return iso}
+}
+async function loadForexFactory(){
+  const btn=document.getElementById('ffBtn'), dot=document.getElementById('ffDot'), status=document.getElementById('ffStatusShort');
+  btn.disabled=true; dot.className='dot wait'; status.textContent='fetching…';
+  try{
+    const r=await fetch(ffUrl,{cache:'no-store'}); if(!r.ok) throw new Error('HTTP '+r.status);
+    const rows=await r.json();
+    ffData=rows.filter(e=>ffCurrencies.has(e.country) && String(e.impact||'').toLowerCase()==='high');
+    renderForexFactory(); renderNews(); renderFactors(); renderDeskNotes();
+    dot.className='dot ok';
+    status.textContent=`${ffData.length} high-impact events · updated ${new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}`;
+  }catch(e){
+    dot.className='dot err'; status.textContent='calendar feed unavailable';
+    document.getElementById('ffBody').innerHTML=`<tr><td colspan="7" class="empty-note">Could not load the Forex Factory feed (${e.message}). Click "Refresh calendar" to retry.</td></tr>`;
+  }finally{ btn.disabled=false; }
+}
+function renderForexFactory(){
+  const body=document.getElementById('ffBody');
+  const sorted=[...ffData].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  body.innerHTML=sorted.map(e=>{
+    const b=ffBias(e);
+    return `<tr><td class="time">${istTime(e.date)}</td><td class="ccy">${e.country}</td><td class="ev">${e.title}</td>
+      <td class="num">${e.actual||'—'}</td><td class="num">${e.forecast||'—'}</td><td class="num">${e.previous||'—'}</td>
+      <td class="bias ${b.cls}">${b.label}</td></tr>`;
+  }).join('') || `<tr><td colspan="7" class="empty-note">No high-impact events this week.</td></tr>`;
+}
+
+/* ================= News — derived live from released Red Folder data (no extra API needed) ================= */
+function renderNews(){
+  const released=ffData.filter(e=>ffNum(e.actual)!==null).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
+  if(!released.length){
+    document.getElementById('newsFeed').innerHTML='<div class="empty-note">No results released yet this week — headlines appear here as Red Folder events print.</div>';
+    return;
+  }
+  document.getElementById('newsFeed').innerHTML=released.map(e=>{
+    const b=ffBias(e);
+    return `<div class="news-row"><div class="nd ${b.cls}"></div>
+      <div class="nb"><div class="nm"><span class="ncc">${e.country}</span><span class="nt">${istTime(e.date)}</span></div>
+      <div class="nh">${e.title}: ${e.actual} vs ${e.forecast} forecast (prev ${e.previous||'—'}) — ${b.label}</div></div></div>`;
+  }).join('');
+}
+
+/* ================= Desk note — free, rule-based, generated only from real data ================= */
+function renderDeskNotes(){
+  const notes=[];
+  const ready=keys.filter(k=>banks[k].score!==null);
+
+  // 1) strongest currency right now (live)
+  if(ready.length){
+    const top=[...ready].sort((a,b)=>banks[b].score-banks[a].score)[0];
+    const tb=banks[top];
+    notes.push({
+      who:`${top} — strongest bias`, when:'live',
+      body:`${top} leads at ${tb.score>0?'+':''}${tb.score} (${label(tb.score).toLowerCase()}). <strong>${tb.reason}</strong>`
+    });
+  } else {
+    notes.push({who:'Scores', when:'—', body:'Waiting for the backend to return live scores.'});
+  }
+
+  // 2) most recent high-conviction Red Folder surprise, if the calendar has loaded
+  const released=ffData.filter(e=>ffNum(e.actual)!==null).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(released.length){
+    const top=released[0], b=ffBias(top);
+    if(b.score!==0){
+      notes.push({
+        who:`${top.country} — calendar reaction`, when:istTime(top.date),
+        body:`${top.title} printed ${top.actual} vs ${top.forecast} forecast — a <strong>${b.label.toLowerCase()}</strong> surprise for ${top.country}. Worth checking whether ${top.country}'s central-bank score above still reflects this.`
+      });
+    }
+  } else {
+    notes.push({who:'Calendar', when:'—', body:'Red Folder feed has not loaded yet — refresh the calendar to generate a live reaction note.'});
+  }
+
+  // 3) currently selected pair, if it shows a meaningful split
+  const a=document.getElementById('baseSel')?.value, q=document.getElementById('quoteSel')?.value;
+  if(a && q && banks[a].score!==null && banks[q].score!==null){
+    const s=+(banks[a].score-banks[q].score).toFixed(1);
+    if(Math.abs(s)>=1){
+      notes.push({
+        who:`${a}${q} — pair watch`, when:'live',
+        body:`Differential sits at ${s>0?'+':''}${s}, a ${label(Math.max(-5,Math.min(5,s))).toLowerCase()} tilt toward ${s>=0?a:q}. Not a trading signal — check which factor above is driving the gap before acting on it.`
+      });
+    }
+  }
+
+  document.getElementById('deskNotes').innerHTML=
+    notes.map(n=>`<div class="note-block"><div class="note-head"><span class="who">${n.who}</span><span class="when">${n.when}</span></div><div class="note-body">${n.body}</div></div>`).join('')+
+    `<div class="note-foot">Generated automatically from the data in this dashboard — free, no API key. To upgrade this to a real language-model writeup, plug an API key into renderDeskNotes() and send it the same facts shown here.</div>`;
+}
+
+/* ================= clock ================= */
+function tick(){
+  document.getElementById('clock').textContent=
+    new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date())+' IST';
+}
+tick(); setInterval(tick,1000);
+
+/* ================= boot ================= */
+renderSpectrum(); renderStrengthTable(); renderFactors(); renderPairTool(); renderDeskNotes();
+loadForexFactory();
+loadLiveScores();
+</script>
+
+</body>
+</html>
